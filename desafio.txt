@@ -1,0 +1,25 @@
+Estratégia escolhida: Soft delete + resolução por "tombstone wins" com feedback ao usuário.
+
+1) Modelagem
+- Toda despesa possui updated_at (epoch ms) e is_deleted (0/1). Exclusões são soft delete (tombstone), persistidas e versionadas.
+
+2) Regra de mesclagem
+- Durante a sincronização, comparamos registros por id.
+- Se remoto.is_deleted == true e local.updated_at > remoto.updated_at (edição local posterior):
+  • Preferimos a exclusão (tombstone wins) para evitar reintroduzir item já removido em outros dispositivos.
+  • Mantemos um log de conflito para UI/UX.
+- Se remoto.is_deleted == true e local.is_deleted == false (edição local, mas anterior ao remoto):
+  • Ganha o remoto (exclusão). O item fica deletado localmente.
+- Se ambos ativos, usa-se o updated_at mais recente (last-write-wins) para campos editáveis.
+
+3) UX
+- Após a sincronização, mostramos uma caixa de diálogo: "Um item editado localmente foi removido remotamente e não pôde ser salvo. Toque para revisar." com opção de "Desfazer" (recriar como nova despesa), sem reutilizar o id original (evita ressuscitar tombstone).
+
+Prós
+- Simples de implementar e previsível (LWW + tombstone wins para deleções).
+- Evita zumbi de dados (não reintroduz itens que o usuário apagou noutro device).
+- Funciona bem offline: atualizações e deleções são enfileiradas e ordenadas por updated_at.
+
+Contras
+- Pode frustrar o usuário que editou localmente; mitigado com Undo/duplicar.
+
