@@ -33,3 +33,4 @@ flutter test
 ## Notas
 - Primeira execução pode criar o banco local `travel_expenses.db`.
 - Alterar a moeda em Configurações atualiza a exibição dos valores.
+- Criado por Anne e Guilherme.
